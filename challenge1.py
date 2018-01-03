@@ -1,64 +1,33 @@
-import socket
-import string
-import time
+from time import sleep
 from math import sqrt
 
-#Settings
+from irc import connect_to_host, join_channel, send_private_message
+
+
+# Globals
 HOST = "irc.root-me.org"
 PORT = 6667
 CHANNEL = "#root-me_challenge"
 NICK = "rumplerino"
 
-#Open socket
-def openSocket():
-    ircSocket = socket.socket()
-    ircSocket.connect((HOST, PORT))
-    ircSocket.send("NICK " + NICK + "\r\n")
-    ircSocket.send("USER guest host bla :Cadamino\r\n")
-    #Give some time to authenticate before joining channel
-    time.sleep(3)
-    ircSocket.send("JOIN " + CHANNEL + "\r\n")
-    return ircSocket
 
-#Wait until connected to the channel and display message
-def joinRoom(sock):
-    readBuffer = ""
-    Loading = True
-    while Loading:
-        readBuffer = readBuffer + sock.recv(1024)
-        temp = string.split(readBuffer, "\n")
-        readBuffer = temp.pop()
-        for line in temp:
-            print(line)
-            if "End of /NAMES list" in line:
-                Loading = False
-    print "Connected!"
+def main():
+    """Solve the challenge, printing the output to console."""
+    # Connect to the IRC and join room
+    irc_socket = connect_to_host(HOST, PORT, NICK)
+    # Give some time to authenticate before joining channel
+    sleep(2)
+    join_channel(irc_socket, CHANNEL)
 
-#Send message, interpret result and respond with solution
-def sendMessage(sock):
-    readbuffer = ""
-    sock.send("PRIVMSG candy :!ep1\r\n")
-    while True:
-        readbuffer = readbuffer + sock.recv(1024)
-        temp = string.split(readbuffer, "\n")
-        readbuffer = temp.pop()
-        print temp
-        for line in temp:
-            if "Candy" in line:
-                #Message comes from candy
-                response = line
-                num = response.split(':')[2].split('/')
-                result = sqrt(int(num[0])) * int(num[1])
-                print "Sending result %f..."%result
-                sock.send("PRIVMSG candy :!ep1 -rep %.2f\r\n"%round(result,2))
-                #Check for a response
-                readbuffer = readbuffer + sock.recv(1024)
-                temp = string.split(readbuffer, "\n")
-                readbuffer = temp.pop()
-                for r in temp:
-                    print r
-                break
+    # Solve puzzle
+    response = send_private_message(irc_socket, "Candy", ":!ep1")
+    x, y = [int(n) for n in response.split(':')[-1].split(' / ')]
+    print("Got numbers: %s, %s" % (x, y))
+    result = round(sqrt(x) * y, 2)
+    print("Sending result")
+    # Print final response
+    print(send_private_message(irc_socket, "Candy", ":!ep1 -rep %f" % result))
 
-ircSocket = openSocket()
-joinRoom(ircSocket)
-sendMessage(ircSocket)
+
+if __name__ == "__main__":
+    main()
