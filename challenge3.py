@@ -16,6 +16,5 @@ def main():
     print(send_solution(sock, 3, solution))
 
 
-
 if __name__ == "__main__":
     main()
